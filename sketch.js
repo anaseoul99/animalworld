@@ -1,3 +1,5 @@
+//vvv1
+
 let imgs = [];
 let animals = [];
 let blobs = [];
@@ -50,7 +52,6 @@ function generateArtwork() {
   generateMagicDust();
 }
 
-// 배경 원을 화면 전체에 분산
 function generateBackground() {
   blobs = [];
 
@@ -121,7 +122,6 @@ function drawBackground() {
   );
 }
 
-// 매직 더스트를 화면 전체에 분산
 function generateMagicDust() {
   sticks = [];
 
@@ -156,37 +156,61 @@ function drawMagicDust() {
   }
 }
 
-// 동물 30개를 화면 전체에 고르게 배치
 function generateLayout() {
   animals = [];
 
-  let columns = max(3, round(sqrt(30 * width / height)));
-  let rows = ceil(30 / columns);
+  // 모바일에서는 동물 수를 줄임
+  let animalCount = width < 600 ? 24 : 30;
+
+  // 모바일에서는 동물 크기도 줄임
+  let responsiveScale = constrain(width / 1242, 0.35, 1);
+
+  // 화면 비율에 맞춰 배치 영역 계산
+  let columns = max(
+    2,
+    round(sqrt(animalCount * width / height))
+  );
+
+  let rows = ceil(animalCount / columns);
 
   let cellW = width / columns;
   let cellH = height / rows;
 
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < animalCount; i++) {
     let img = random(imgs);
 
-    let col = i % columns;
-    let row = floor(i / columns);
-
-    let scaleValue = random(0.12, 0.22);
+    let scaleValue =
+      random(0.12, 0.22) * responsiveScale;
 
     let w = img.width * scaleValue;
     let h = img.height * scaleValue;
 
-    // 각 영역 안에서 위치를 조금씩 무작위로 변경
-    let x = (col + 0.5) * cellW +
-      random(-cellW * 0.25, cellW * 0.25);
+    let col = i % columns;
+    let row = floor(i / columns);
 
-    let y = (row + 0.5) * cellH +
-      random(-cellH * 0.25, cellH * 0.25);
+    let x =
+      (col + 0.5) * cellW +
+      random(-cellW * 0.18, cellW * 0.18);
 
-    // 화면 경계 안으로 제한
-    x = constrain(x, w / 2 + 5, width - w / 2 - 5);
-    y = constrain(y, h / 2 + 5, height - h / 2 - 5);
+    let y =
+      (row + 0.5) * cellH +
+      random(-cellH * 0.18, cellH * 0.18);
+
+    // 가장자리에서 잘리지 않도록 제한
+    let marginX = min(w / 2 + 5, width / 2);
+    let marginY = min(h / 2 + 5, height / 2);
+
+    x = constrain(
+      x,
+      marginX,
+      max(marginX, width - marginX)
+    );
+
+    y = constrain(
+      y,
+      marginY,
+      max(marginY, height - marginY)
+    );
 
     animals.push({
       img: img,
@@ -194,7 +218,7 @@ function generateLayout() {
       y: y,
       w: w,
       h: h,
-      angle: random(-PI / 4, PI / 4)
+      angle: random(-PI / 6, PI / 6)
     });
   }
 }
@@ -249,7 +273,6 @@ function drawAnimals() {
   imageMode(CORNER);
 }
 
-// 클릭으로 음악 재생 / 정지
 function triggerSound() {
   if (!song) return;
 
@@ -268,14 +291,12 @@ function mousePressed() {
   return false;
 }
 
-// Cargo iframe 연동
 window.addEventListener("message", function(event) {
   if (event.data === "triggerSound") {
     triggerSound();
   }
 });
 
-// 저장 단축키
 function keyPressed() {
   if (key === "r" || key === "R") {
     saveGif("poison-garden", 8);
