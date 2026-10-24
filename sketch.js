@@ -1,3 +1,5 @@
+//v1
+
 let imgs = [];
 let animals = [];
 let blobs = [];
@@ -6,6 +8,7 @@ let sticks = [];
 let song;
 let fft;
 let locked = false;
+let lastTrigger = 0;
 
 function preload() {
   imgs.push(loadImage("deer.png"));
@@ -48,7 +51,6 @@ function generateArtwork() {
   generateMagicDust();
 }
 
-// 배경의 컬러 블롭
 function generateBackground() {
   blobs = [];
 
@@ -101,11 +103,7 @@ function drawBackground() {
       map(bass, 0, 255, 20, 65)
     );
 
-    circle(
-      b.x + offsetX,
-      b.y + offsetY,
-      s
-    );
+    circle(b.x + offsetX, b.y + offsetY, s);
   }
 
   let moonSize = 220 + map(bass, 0, 255, 0, 35);
@@ -114,7 +112,6 @@ function drawBackground() {
   circle(width * 0.82, height * 0.18, moonSize);
 }
 
-// 반짝이는 점
 function generateMagicDust() {
   sticks = [];
 
@@ -138,58 +135,38 @@ function drawMagicDust() {
   noStroke();
 
   for (let s of sticks) {
-    fill(
-      s.color[0],
-      s.color[1],
-      s.color[2],
-      160
-    );
-
+    fill(s.color[0], s.color[1], s.color[2], 160);
     circle(s.x, s.y, s.size);
   }
 }
 
-// 동물을 화면 전체에 무작위 배치
 function generateLayout() {
   animals = [];
 
   let animalCount = width < 600 ? 24 : 30;
-
-  // 모바일에서는 크기를 줄임
   let responsiveScale = constrain(width / 1242, 0.35, 1);
 
   for (let i = 0; i < animalCount; i++) {
     let img = random(imgs);
-
-    let scaleValue =
-      random(0.12, 0.22) * responsiveScale;
-
+    let scaleValue = random(0.12, 0.22) * responsiveScale;
     let w = img.width * scaleValue;
     let h = img.height * scaleValue;
-
-    // 회전해도 화면 밖으로 나가지 않도록 여백 설정
     let marginX = min(max(w, h) * 0.8 + 5, width / 2);
     let marginY = min(max(w, h) * 0.8 + 5, height / 2);
 
     animals.push({
       img: img,
-
-      // 격자 없이 무작위 위치
       x: random(marginX, max(marginX, width - marginX)),
       y: random(marginY, max(marginY, height - marginY)),
-
       w: w,
       h: h,
-
       angle: random(-PI / 3, PI / 3),
-
       phase: random(TWO_PI),
       speed: random(0.5, 1.5)
     });
   }
 }
 
-// 동물 그리기 및 음악 반응
 function drawAnimals() {
   imageMode(CENTER);
 
@@ -199,7 +176,6 @@ function drawAnimals() {
 
   if (song && song.isPlaying()) {
     fft.analyze();
-
     bass = fft.getEnergy("bass");
     mid = fft.getEnergy("mid");
     treble = fft.getEnergy("treble");
@@ -207,26 +183,15 @@ function drawAnimals() {
 
   for (let a of animals) {
     push();
-
     translate(a.x, a.y);
-
     rotate(
       a.angle +
       sin(frameCount * 0.04 * a.speed + a.phase) *
       map(mid, 0, 255, 0, 0.15)
     );
-
-    let s = map(bass, 0, 255, 1, 1.15);
-
-    scale(s);
-
-    tint(
-      255,
-      map(treble, 0, 255, 180, 255)
-    );
-
+    scale(map(bass, 0, 255, 1, 1.15));
+    tint(255, map(treble, 0, 255, 180, 255));
     image(a.img, 0, 0, a.w, a.h);
-
     pop();
   }
 
@@ -234,15 +199,17 @@ function drawAnimals() {
   imageMode(CORNER);
 }
 
-// 클릭으로 음악 재생 / 정지
 function triggerSound() {
   if (!song) return;
+  if (millis() - lastTrigger < 400) return;
+  lastTrigger = millis();
 
   if (song.isPlaying() || locked) {
     song.stop();
     locked = false;
   } else {
     userStartAudio();
+    getAudioContext().resume();
     song.play();
     locked = true;
   }
@@ -253,14 +220,22 @@ function mousePressed() {
   return false;
 }
 
-// Cargo iframe 메시지 연동
+function touchStarted() {
+  triggerSound();
+  return false;
+}
+
+document.addEventListener("touchstart", (event) => {
+  triggerSound();
+  event.preventDefault();
+}, { passive: false });
+
 window.addEventListener("message", function(event) {
   if (event.data === "triggerSound") {
     triggerSound();
   }
 });
 
-// 저장 단축키
 function keyPressed() {
   if (key === "r" || key === "R") {
     saveGif("poison-garden", 8);
