@@ -5,8 +5,7 @@ let animals = [];
 let blobs = [];
 let sticks = [];
 
-let song;
-let fft;
+let speaker;
 let locked = false;
 let lastTrigger = 0;
 
@@ -15,19 +14,12 @@ function preload() {
   imgs.push(loadImage("bird.png"));
   imgs.push(loadImage("bear.png"));
   imgs.push(loadImage("unicorn.png"));
-
-  song = loadSound("1-2.mp3");
 }
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
   imageMode(CORNER);
   noStroke();
-
-  song.setVolume(1);
-
-  fft = new p5.FFT();
-  fft.setInput(song);
 
   generateArtwork();
 }
@@ -49,6 +41,15 @@ function generateArtwork() {
   generateBackground();
   generateLayout();
   generateMagicDust();
+}
+
+function isOn() {
+  return locked || (speaker && !speaker.paused);
+}
+
+function levels() {
+  if (!isOn()) return { bass: 0, mid: 0, treble: 0 };
+  return { bass: 100, mid: 80, treble: 60 };
 }
 
 function generateBackground() {
@@ -74,14 +75,7 @@ function generateBackground() {
 }
 
 function drawBackground() {
-  let bass = 0;
-  let mid = 0;
-
-  if (song && song.isPlaying()) {
-    fft.analyze();
-    bass = fft.getEnergy("bass");
-    mid = fft.getEnergy("mid");
-  }
+  const { bass, mid } = levels();
 
   noStroke();
 
@@ -170,16 +164,7 @@ function generateLayout() {
 function drawAnimals() {
   imageMode(CENTER);
 
-  let bass = 0;
-  let mid = 0;
-  let treble = 0;
-
-  if (song && song.isPlaying()) {
-    fft.analyze();
-    bass = fft.getEnergy("bass");
-    mid = fft.getEnergy("mid");
-    treble = fft.getEnergy("treble");
-  }
+  const { bass, mid, treble } = levels();
 
   for (let a of animals) {
     push();
@@ -199,19 +184,33 @@ function drawAnimals() {
   imageMode(CORNER);
 }
 
+function speakerAudio() {
+  if (!speaker) {
+    speaker = new Audio("1-2.mp3");
+    speaker.setAttribute("playsinline", "");
+    speaker.preload = "auto";
+  }
+  return speaker;
+}
+
 function triggerSound() {
-  if (!song) return;
   if (millis() - lastTrigger < 400) return;
   lastTrigger = millis();
 
-  if (song.isPlaying() || locked) {
-    song.stop();
+  const audio = speakerAudio();
+
+  if (!audio.paused) {
+    audio.pause();
+    audio.currentTime = 0;
     locked = false;
   } else {
-    userStartAudio();
-    getAudioContext().resume();
-    song.play();
     locked = true;
+    const played = audio.play();
+    if (played) {
+      played.catch(() => {
+        locked = false;
+      });
+    }
   }
 }
 
