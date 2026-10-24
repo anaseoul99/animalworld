@@ -1,3 +1,5 @@
+
+//vv1
 let imgs = [];
 let animals = [];
 let blobs = [];
@@ -9,72 +11,41 @@ let played = false;
 let locked = false;
 let started = false;
 
-// 원본 작품 크기
-const DESIGN_W = 1242;
-const DESIGN_H = 886;
-
-
 function preload() {
-
   imgs.push(loadImage("deer.png"));
   imgs.push(loadImage("bird.png"));
   imgs.push(loadImage("bear.png"));
   imgs.push(loadImage("unicorn.png"));
 
   song = loadSound("1-2.mp3");
-
 }
 
 function setup() {
-
-   createCanvas(windowWidth, windowHeight);
+  createCanvas(windowWidth, windowHeight);
   imageMode(CORNER);
-  
-  song = loadSound("1-2.mp3", () => {
 
-    song.play();
-    song.stop();
-
-  });
-
-  
-  userStartAudio();
   song.setVolume(1);
+
   fft = new p5.FFT();
   fft.setInput(song);
 
   generateArtwork();
-
 }
 
 function draw() {
-
-
-  // 원본 작품 비율을 유지하면서 화면 안에 맞춤
-  const scaleValue = min(
-    width / DESIGN_W,
-    height / DESIGN_H
-  );
-
-  const drawW = DESIGN_W * scaleValue;
-  const drawH = DESIGN_H * scaleValue;
-
-  const offsetX = (width - drawW) / 2;
-  const offsetY = (height - drawH) / 2;
-
-  push();
-
-  translate(offsetX, offsetY);
-  scale(scaleValue);
+  background(10, 10, 18);
 
   drawBackground();
   drawMagicDust();
   drawAnimals();
-
 }
 
-function generateArtwork(){
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  generateArtwork();
+}
 
+function generateArtwork() {
   animals = [];
   blobs = [];
   sticks = [];
@@ -82,124 +53,94 @@ function generateArtwork(){
   generateBackground();
   generateLayout();
   generateMagicDust();
-
 }
 
-function generateBackground(){
-
+function generateBackground() {
   let palette = [
-
-    [40,255,120],   // 형광 초록
-    [120,255,80],   // 독 연두
-    [180,80,255],   // 보라
-    [120,40,180],   // 진보라
-    [30,20,40]      // 검정
-
+    [40, 255, 120],
+    [120, 255, 80],
+    [180, 80, 255],
+    [120, 40, 180],
+    [30, 20, 40]
   ];
 
-  for(let i=0;i<45;i++){
-
+  for (let i = 0; i < 45; i++) {
     let c = random(palette);
 
     blobs.push({
-
       x: random(width),
       y: random(height),
-
-      size: random(150,500),
-
+      size: random(150, 500),
       color: c
-
     });
+  }
+}
 
+function drawBackground() {
+  if (fft && song && song.isPlaying()) {
+    fft.analyze();
   }
 
-}
-function drawBackground(){
-
-  background(10,10,18);
-
-  fft.analyze();
-
-  let bass = fft.getEnergy("bass");
-  let mid = fft.getEnergy("mid");
+  let bass = fft ? fft.getEnergy("bass") : 0;
+  let mid = fft ? fft.getEnergy("mid") : 0;
 
   noStroke();
 
-  for(let b of blobs){
+  for (let b of blobs) {
+    let s = b.size + map(bass, 0, 255, 0, 120);
 
-    // 저음에 따라 크기 변화
-    let s =
-      b.size +
-      map(bass,0,255,0,120);
-
-    // 중음에 따라 천천히 떠다님
     let offsetX =
-      sin(frameCount*0.01+b.y)*map(mid,0,255,0,25);
+      sin(frameCount * 0.01 + b.y) *
+      map(mid, 0, 255, 0, 25);
 
     let offsetY =
-      cos(frameCount*0.01+b.x)*map(mid,0,255,0,15);
+      cos(frameCount * 0.01 + b.x) *
+      map(mid, 0, 255, 0, 15);
 
-    // 음악에 따라 밝기 변화
     fill(
       b.color[0],
       b.color[1],
       b.color[2],
-      map(bass,0,255,20,70)
+      map(bass, 0, 255, 20, 70)
     );
 
     ellipse(
-      b.x+offsetX,
-      b.y+offsetY,
+      b.x + offsetX,
+      b.y + offsetY,
       s
     );
-
   }
 
-  // 달
-  let moonSize =
-    220+
-    map(bass,0,255,0,35);
+  let moonSize = 220 + map(bass, 0, 255, 0, 35);
 
-  fill(140,80,255,140);
+  fill(140, 80, 255, 140);
 
   circle(
-    width*0.82,
-    height*0.18,
+    width * 0.82,
+    height * 0.18,
     moonSize
   );
-
 }
 
-function generateMagicDust(){
-
-  for(let i=0;i<250;i++){
-
+function generateMagicDust() {
+  for (let i = 0; i < 250; i++) {
     sticks.push({
-
       x: random(width),
       y: random(height),
-
-      size: random(2,8),
-
+      size: random(2, 8),
       color: random([
-        [40,255,120],
-        [180,80,255],
-        [120,255,80]
+        [40, 255, 120],
+        [180, 80, 255],
+        [120, 255, 80]
       ])
-
     });
-
   }
-
 }
 
-function drawMagicDust(){
-
+function drawMagicDust() {
   noStroke();
 
-  for(let s of sticks){
-
+  for (let s of sticks) {
     fill(
       s.color[0],
       s.color[1],
@@ -207,205 +148,148 @@ function drawMagicDust(){
       140
     );
 
-    circle(
-      s.x,
-      s.y,
-      s.size
-    );
-
+    circle(s.x, s.y, s.size);
   }
-
 }
 
-function generateLayout(){
-
+function generateLayout() {
   let tries = 0;
 
-  while(
-    animals.length < 30 &&
-    tries < 5000
-  ){
+  let targetCount = 30;
 
+  while (
+    animals.length < targetCount &&
+    tries < 10000
+  ) {
     let img = random(imgs);
 
-    let scaleValue =
-      random(0.12,0.22);
+    let scaleValue = random(0.12, 0.22);
 
-    let w =
-      img.width *
-      scaleValue;
+    let w = img.width * scaleValue;
+    let h = img.height * scaleValue;
 
-    let h =
-      img.height *
-      scaleValue;
+    // 회전과 확대를 고려해 가장자리 여백 확보
+    let margin = max(w, h) * 0.8 + 8;
 
-    let x =
-      random(w/2,width-w/2);
+    let x = random(
+      min(margin, width / 2),
+      max(width - margin, width / 2)
+    );
 
-    let y =
-      random(h/2,height-h/2);
+    let y = random(
+      min(margin, height / 2),
+      max(height - margin, height / 2)
+    );
+
+    let angle = random(-PI / 6, PI / 6);
 
     let ok = true;
 
-    for(let other of animals){
-
-      let d = dist(
-        x,
-        y,
-        other.x,
-        other.y
-      );
+    for (let other of animals) {
+      let d = dist(x, y, other.x, other.y);
 
       let minDist =
-        max(w,h)/2 +
-        max(other.w,other.h)/2 +
-        50;
+        (max(w, h) + max(other.w, other.h)) * 0.35 + 15;
 
-      if(d < minDist){
-
+      if (d < minDist) {
         ok = false;
         break;
-
       }
-
     }
 
-    if(ok){
-
+    if (ok) {
       animals.push({
-
         img: img,
-
         x: x,
         y: y,
-
         w: w,
         h: h,
-
-        angle: random(
-          -PI/3,
-          PI/3
-        )
-
+        angle: angle
       });
-
     }
 
     tries++;
-
   }
-
 }
 
-function drawAnimals(){
-
+function drawAnimals() {
   imageMode(CENTER);
 
-  fft.analyze();
+  if (fft && song && song.isPlaying()) {
+    fft.analyze();
+  }
 
-  let bass = fft.getEnergy("bass");
-  let mid = fft.getEnergy("mid");
-  let treble = fft.getEnergy("treble");
+  let bass = fft ? fft.getEnergy("bass") : 0;
+  let mid = fft ? fft.getEnergy("mid") : 0;
+  let treble = fft ? fft.getEnergy("treble") : 0;
 
-  for(let a of animals){
-
+  for (let a of animals) {
     push();
 
-    translate(a.x,a.y);
+    translate(a.x, a.y);
 
     rotate(
       a.angle +
-      sin(frameCount*0.04+a.x)*map(mid,0,255,0,0.2)
+      sin(frameCount * 0.04 + a.x) *
+      map(mid, 0, 255, 0, 0.2)
     );
 
-    let s = map(bass,0,255,1,1.25);
+    let s = map(bass, 0, 255, 1, 1.15);
 
     scale(s);
 
     tint(
       255,
-      map(treble,0,255,180,255)
+      map(treble, 0, 255, 180, 255)
     );
 
     image(
       a.img,
       0,
       0,
-      a.w, 
+      a.w,
       a.h
     );
 
     pop();
-
   }
 
   noTint();
-
+  imageMode(CORNER);
 }
 
+function triggerSound() {
+  if (!song) return;
 
-function triggerSound(){
-
-  //alert(song.isPlaying());
-  //alert(locked);
-  // 👉 이미 음악이 시작됐으면 아무것도 안 함
   if (song.isPlaying() || locked) {
-    //alert('stop');
     song.stop();
-    locked = false; 
-   // return false;
-  }else{
-    //alert('play');
+    locked = false;
+  } else {
+    userStartAudio();
     song.play();
-    locked = true;   // ⭐ 이후 모든 클릭 잠금
+    locked = true;
   }
 
-  generateArtwork(); // 처음 1번만 실행
-
+  generateArtwork();
 }
 
 function mousePressed() {
   triggerSound();
+  return false;
 }
 
-
-
-window.addEventListener("message", (event) => {
+window.addEventListener("message", function(event) {
   if (event.data === "triggerSound") {
     triggerSound();
   }
 });
 
-
-/*
-function mouseMoved() {
-  // 캔버스 안에 있을 때만
-  if (
-    mouseX > 0 &&
-    mouseX < width &&
-    mouseY > 0 &&
-    mouseY < height
-  ) {
-    if (!played) {
-      song.play();   // 또는 loop()
-      played = true; // ← 핵심: 딱 1번만
-    }
-
-
-
-    generateArtwork();
-  }
-}
-
-*/
-function keyPressed(){
-
-  if(key === 'r' || key === 'R'){
-    saveGif('poison-garden', 8);
+function keyPressed() {
+  if (key === "r" || key === "R") {
+    saveGif("poison-garden", 8);
   }
 
-  if(key === 's' || key === 'S'){
-    saveCanvas('poison-garden', 'png');
+  if (key === "s" || key === "S") {
+    saveCanvas("poison-garden", "png");
   }
-
 }
