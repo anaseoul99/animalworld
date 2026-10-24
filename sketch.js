@@ -1,5 +1,3 @@
-//vvv1
-
 let imgs = [];
 let animals = [];
 let blobs = [];
@@ -7,7 +5,6 @@ let sticks = [];
 
 let song;
 let fft;
-
 let locked = false;
 
 function preload() {
@@ -21,7 +18,6 @@ function preload() {
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-
   imageMode(CORNER);
   noStroke();
 
@@ -52,6 +48,7 @@ function generateArtwork() {
   generateMagicDust();
 }
 
+// 배경의 컬러 블롭
 function generateBackground() {
   blobs = [];
 
@@ -114,14 +111,10 @@ function drawBackground() {
   let moonSize = 220 + map(bass, 0, 255, 0, 35);
 
   fill(140, 80, 255, 120);
-
-  circle(
-    width * 0.82,
-    height * 0.18,
-    moonSize
-  );
+  circle(width * 0.82, height * 0.18, moonSize);
 }
 
+// 반짝이는 점
 function generateMagicDust() {
   sticks = [];
 
@@ -156,25 +149,14 @@ function drawMagicDust() {
   }
 }
 
+// 동물을 화면 전체에 무작위 배치
 function generateLayout() {
   animals = [];
 
-  // 모바일에서는 동물 수를 줄임
   let animalCount = width < 600 ? 24 : 30;
 
-  // 모바일에서는 동물 크기도 줄임
+  // 모바일에서는 크기를 줄임
   let responsiveScale = constrain(width / 1242, 0.35, 1);
-
-  // 화면 비율에 맞춰 배치 영역 계산
-  let columns = max(
-    2,
-    round(sqrt(animalCount * width / height))
-  );
-
-  let rows = ceil(animalCount / columns);
-
-  let cellW = width / columns;
-  let cellH = height / rows;
 
   for (let i = 0; i < animalCount; i++) {
     let img = random(imgs);
@@ -185,44 +167,29 @@ function generateLayout() {
     let w = img.width * scaleValue;
     let h = img.height * scaleValue;
 
-    let col = i % columns;
-    let row = floor(i / columns);
-
-    let x =
-      (col + 0.5) * cellW +
-      random(-cellW * 0.18, cellW * 0.18);
-
-    let y =
-      (row + 0.5) * cellH +
-      random(-cellH * 0.18, cellH * 0.18);
-
-    // 가장자리에서 잘리지 않도록 제한
-    let marginX = min(w / 2 + 5, width / 2);
-    let marginY = min(h / 2 + 5, height / 2);
-
-    x = constrain(
-      x,
-      marginX,
-      max(marginX, width - marginX)
-    );
-
-    y = constrain(
-      y,
-      marginY,
-      max(marginY, height - marginY)
-    );
+    // 회전해도 화면 밖으로 나가지 않도록 여백 설정
+    let marginX = min(max(w, h) * 0.8 + 5, width / 2);
+    let marginY = min(max(w, h) * 0.8 + 5, height / 2);
 
     animals.push({
       img: img,
-      x: x,
-      y: y,
+
+      // 격자 없이 무작위 위치
+      x: random(marginX, max(marginX, width - marginX)),
+      y: random(marginY, max(marginY, height - marginY)),
+
       w: w,
       h: h,
-      angle: random(-PI / 6, PI / 6)
+
+      angle: random(-PI / 3, PI / 3),
+
+      phase: random(TWO_PI),
+      speed: random(0.5, 1.5)
     });
   }
 }
 
+// 동물 그리기 및 음악 반응
 function drawAnimals() {
   imageMode(CENTER);
 
@@ -245,7 +212,7 @@ function drawAnimals() {
 
     rotate(
       a.angle +
-      sin(frameCount * 0.04 + a.x) *
+      sin(frameCount * 0.04 * a.speed + a.phase) *
       map(mid, 0, 255, 0, 0.15)
     );
 
@@ -258,13 +225,7 @@ function drawAnimals() {
       map(treble, 0, 255, 180, 255)
     );
 
-    image(
-      a.img,
-      0,
-      0,
-      a.w,
-      a.h
-    );
+    image(a.img, 0, 0, a.w, a.h);
 
     pop();
   }
@@ -273,6 +234,7 @@ function drawAnimals() {
   imageMode(CORNER);
 }
 
+// 클릭으로 음악 재생 / 정지
 function triggerSound() {
   if (!song) return;
 
@@ -291,12 +253,14 @@ function mousePressed() {
   return false;
 }
 
+// Cargo iframe 메시지 연동
 window.addEventListener("message", function(event) {
   if (event.data === "triggerSound") {
     triggerSound();
   }
 });
 
+// 저장 단축키
 function keyPressed() {
   if (key === "r" || key === "R") {
     saveGif("poison-garden", 8);
