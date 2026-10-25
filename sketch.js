@@ -8,6 +8,7 @@ let sticks = [];
 let song;
 let fft;
 let lastTrigger = 0;
+let touchedAt = 0;
 
 function preload() {
   imgs.push(loadImage("deer.png"));
@@ -23,6 +24,10 @@ function setup() {
   noStroke();
   fft = new p5.FFT(0.75, 128);
   generateArtwork();
+
+  document.body.style.touchAction = "none";
+  document.addEventListener("touchstart", onGesture, { capture: true, passive: false });
+  document.addEventListener("mousedown", onGesture, { capture: true });
 }
 
 function draw() {
@@ -153,28 +158,28 @@ function drawAnimals() {
   imageMode(CORNER);
 }
 
-function triggerSound() {
-  if (millis() - lastTrigger < 400) return;
+function onGesture(event) {
+  if (event.type === "touchstart") {
+    touchedAt = millis();
+    event.preventDefault();
+  } else if (millis() - touchedAt < 800) {
+    return;
+  }
+
+  if (millis() - lastTrigger < 500) return;
   lastTrigger = millis();
   if (!song || !song.isLoaded()) return;
 
+  const ctx = getAudioContext();
+  if (ctx.state !== "running") ctx.resume();
   userStartAudio();
+
   if (song.isPlaying()) song.pause();
   else song.play();
 }
 
-function mousePressed() {
-  triggerSound();
-  return false;
-}
-
-function touchStarted() {
-  triggerSound();
-  return false;
-}
-
 window.addEventListener("message", function (event) {
-  if (event.data === "triggerSound") triggerSound();
+  if (event.data === "triggerSound") onGesture({ type: "message" });
 });
 
 function keyPressed() {
