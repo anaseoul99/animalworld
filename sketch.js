@@ -1,3 +1,5 @@
+//vvvv1
+
 let imgs = [];
 let animals = [];
 let blobs = [];
@@ -16,21 +18,11 @@ function preload() {
 }
 
 function setup() {
-  const cnv = createCanvas(windowWidth, windowHeight);
+  createCanvas(windowWidth, windowHeight);
   imageMode(CORNER);
   noStroke();
   fft = new p5.FFT(0.75, 128);
   generateArtwork();
-
-  document.body.style.touchAction = "none";
-  cnv.elt.style.touchAction = "none";
-
-  if (window.PointerEvent) {
-    cnv.elt.addEventListener("pointerdown", onPointerDown, { passive: false });
-  } else {
-    cnv.elt.addEventListener("touchstart", onPointerDown, { passive: false });
-    cnv.elt.addEventListener("mousedown", onPointerDown);
-  }
 }
 
 function draw() {
@@ -161,29 +153,18 @@ function drawAnimals() {
   imageMode(CORNER);
 }
 
-function onPointerDown(event) {
-  if (event.button != null && event.button !== 0) return;
-
-  const ctx = getAudioContext();
-  if (ctx.state !== "running") ctx.resume();
-  userStartAudio();
-
-  if (!song || !song.isLoaded()) return;
+function mousePressed() {
   if (millis() - lastTrigger < 400) return;
   lastTrigger = millis();
+  if (!song || !song.isLoaded()) return;
 
+  getAudioContext().resume();
   if (song.isPlaying()) song.pause();
   else song.play();
-
-  event.preventDefault();
-}
-
-function touchStarted() {
-  return false;
 }
 
 window.addEventListener("message", function (event) {
-  if (event.data === "triggerSound") onPointerDown({ type: "message" });
+  if (event.data === "triggerSound") mousePressed();
 });
 
 function keyPressed() {
