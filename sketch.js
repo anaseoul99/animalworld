@@ -1,3 +1,5 @@
+//vv2
+
 let imgs = [];
 let animals = [];
 let blobs = [];
@@ -16,8 +18,7 @@ function preload() {
 }
 
 function setup() {
-  const cnv = createCanvas(windowWidth, windowHeight);
-  cnv.elt.style.touchAction = "none";
+  createCanvas(windowWidth, windowHeight);
   imageMode(CORNER);
   noStroke();
   fft = new p5.FFT(0.75, 128);
@@ -166,7 +167,7 @@ function mousePressed() {
   toggleSound();
 }
 
-function touchStarted() {
+function touchEnded() {
   toggleSound();
 }
 
