@@ -1,5 +1,3 @@
-//vvvv1
-
 let imgs = [];
 let animals = [];
 let blobs = [];
@@ -18,7 +16,8 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
+  const cnv = createCanvas(windowWidth, windowHeight);
+  cnv.elt.style.touchAction = "none";
   imageMode(CORNER);
   noStroke();
   fft = new p5.FFT(0.75, 128);
@@ -153,8 +152,8 @@ function drawAnimals() {
   imageMode(CORNER);
 }
 
-function mousePressed() {
-  if (millis() - lastTrigger < 400) return;
+function toggleSound() {
+  if (millis() - lastTrigger < 500) return;
   lastTrigger = millis();
   if (!song || !song.isLoaded()) return;
 
@@ -163,8 +162,16 @@ function mousePressed() {
   else song.play();
 }
 
+function mousePressed() {
+  toggleSound();
+}
+
+function touchStarted() {
+  toggleSound();
+}
+
 window.addEventListener("message", function (event) {
-  if (event.data === "triggerSound") mousePressed();
+  if (event.data === "triggerSound") toggleSound();
 });
 
 function keyPressed() {
