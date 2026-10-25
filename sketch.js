@@ -1,4 +1,4 @@
-//v1
+//vv1
 
 let imgs = [];
 let animals = [];
@@ -7,8 +7,9 @@ let sticks = [];
 
 let song;
 let fft;
-let lastTrigger = 0;
-let touchedAt = 0;
+let px = -1;
+let py = -1;
+let lastTouchToggle = 0;
 
 function preload() {
   imgs.push(loadImage("deer.png"));
@@ -19,15 +20,12 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
+  const canvas = createCanvas(windowWidth, windowHeight);
+  canvas.elt.style.touchAction = "manipulation";
   imageMode(CORNER);
   noStroke();
   fft = new p5.FFT(0.75, 128);
   generateArtwork();
-
-  document.body.style.touchAction = "none";
-  document.addEventListener("touchstart", onGesture, { capture: true, passive: false });
-  document.addEventListener("mousedown", onGesture, { capture: true });
 }
 
 function draw() {
@@ -140,13 +138,16 @@ function generateLayout() {
 
 function drawAnimals() {
   const { bass, mid, treble } = energy();
+  const hovering = px >= 0 && px <= width && py >= 0 && py <= height;
   imageMode(CENTER);
 
   for (let a of animals) {
     const kick = bass / 255;
     const sway = mid / 255;
+    const pullX = hovering ? (px - a.x) * 0.04 : 0;
+    const pullY = hovering ? (py - a.y) * 0.04 : 0;
     push();
-    translate(a.x + sin(a.phase) * sway * 16, a.y - kick * 48);
+    translate(a.x + pullX + sin(a.phase) * sway * 16, a.y + pullY - kick * 48);
     rotate(a.angle + sin(frameCount * 0.08 + a.phase) * sway * 0.5);
     scale(1 + kick * 0.5);
     tint(255, 200 + treble * 0.2);
@@ -158,28 +159,49 @@ function drawAnimals() {
   imageMode(CORNER);
 }
 
-function onGesture(event) {
-  if (event.type === "touchstart") {
-    touchedAt = millis();
-    event.preventDefault();
-  } else if (millis() - touchedAt < 800) {
-    return;
-  }
-
-  if (millis() - lastTrigger < 500) return;
-  lastTrigger = millis();
+function toggleSound(fromTouch) {
+  if (fromTouch) lastTouchToggle = millis();
+  else if (millis() - lastTouchToggle < 700) return;
   if (!song || !song.isLoaded()) return;
 
   const ctx = getAudioContext();
   if (ctx.state !== "running") ctx.resume();
   userStartAudio();
-
   if (song.isPlaying()) song.pause();
   else song.play();
 }
 
+function mouseMoved() {
+  px = mouseX;
+  py = mouseY;
+}
+
+function mousePressed() {
+  px = mouseX;
+  py = mouseY;
+  toggleSound(false);
+  return false;
+}
+
+function touchStarted() {
+  if (touches.length) {
+    px = touches[0].x;
+    py = touches[0].y;
+  }
+  toggleSound(true);
+  return false;
+}
+
+function touchMoved() {
+  if (touches.length) {
+    px = touches[0].x;
+    py = touches[0].y;
+  }
+  return false;
+}
+
 window.addEventListener("message", function (event) {
-  if (event.data === "triggerSound") onGesture({ type: "message" });
+  if (event.data === "triggerSound") toggleSound(true);
 });
 
 function keyPressed() {
