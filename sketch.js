@@ -1,5 +1,3 @@
-//vv1
-
 let imgs = [];
 let animals = [];
 let blobs = [];
@@ -7,9 +5,7 @@ let sticks = [];
 
 let song;
 let fft;
-let px = -1;
-let py = -1;
-let lastTouchToggle = 0;
+let lastTrigger = 0;
 
 function preload() {
   imgs.push(loadImage("deer.png"));
@@ -20,12 +16,21 @@ function preload() {
 }
 
 function setup() {
-  const canvas = createCanvas(windowWidth, windowHeight);
-  canvas.elt.style.touchAction = "manipulation";
+  const cnv = createCanvas(windowWidth, windowHeight);
   imageMode(CORNER);
   noStroke();
   fft = new p5.FFT(0.75, 128);
   generateArtwork();
+
+  document.body.style.touchAction = "none";
+  cnv.elt.style.touchAction = "none";
+
+  if (window.PointerEvent) {
+    cnv.elt.addEventListener("pointerdown", onPointerDown, { passive: false });
+  } else {
+    cnv.elt.addEventListener("touchstart", onPointerDown, { passive: false });
+    cnv.elt.addEventListener("mousedown", onPointerDown);
+  }
 }
 
 function draw() {
@@ -138,16 +143,13 @@ function generateLayout() {
 
 function drawAnimals() {
   const { bass, mid, treble } = energy();
-  const hovering = px >= 0 && px <= width && py >= 0 && py <= height;
   imageMode(CENTER);
 
   for (let a of animals) {
     const kick = bass / 255;
     const sway = mid / 255;
-    const pullX = hovering ? (px - a.x) * 0.04 : 0;
-    const pullY = hovering ? (py - a.y) * 0.04 : 0;
     push();
-    translate(a.x + pullX + sin(a.phase) * sway * 16, a.y + pullY - kick * 48);
+    translate(a.x + sin(a.phase) * sway * 16, a.y - kick * 48);
     rotate(a.angle + sin(frameCount * 0.08 + a.phase) * sway * 0.5);
     scale(1 + kick * 0.5);
     tint(255, 200 + treble * 0.2);
@@ -159,49 +161,29 @@ function drawAnimals() {
   imageMode(CORNER);
 }
 
-function toggleSound(fromTouch) {
-  if (fromTouch) lastTouchToggle = millis();
-  else if (millis() - lastTouchToggle < 700) return;
-  if (!song || !song.isLoaded()) return;
+function onPointerDown(event) {
+  if (event.button != null && event.button !== 0) return;
 
   const ctx = getAudioContext();
   if (ctx.state !== "running") ctx.resume();
   userStartAudio();
+
+  if (!song || !song.isLoaded()) return;
+  if (millis() - lastTrigger < 400) return;
+  lastTrigger = millis();
+
   if (song.isPlaying()) song.pause();
   else song.play();
-}
 
-function mouseMoved() {
-  px = mouseX;
-  py = mouseY;
-}
-
-function mousePressed() {
-  px = mouseX;
-  py = mouseY;
-  toggleSound(false);
-  return false;
+  event.preventDefault();
 }
 
 function touchStarted() {
-  if (touches.length) {
-    px = touches[0].x;
-    py = touches[0].y;
-  }
-  toggleSound(true);
-  return false;
-}
-
-function touchMoved() {
-  if (touches.length) {
-    px = touches[0].x;
-    py = touches[0].y;
-  }
   return false;
 }
 
 window.addEventListener("message", function (event) {
-  if (event.data === "triggerSound") toggleSound(true);
+  if (event.data === "triggerSound") onPointerDown({ type: "message" });
 });
 
 function keyPressed() {
