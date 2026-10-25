@@ -5,8 +5,8 @@ let animals = [];
 let blobs = [];
 let sticks = [];
 
-let speaker;
-let locked = false;
+let song;
+let fft;
 let lastTrigger = 0;
 
 function preload() {
@@ -14,19 +14,19 @@ function preload() {
   imgs.push(loadImage("bird.png"));
   imgs.push(loadImage("bear.png"));
   imgs.push(loadImage("unicorn.png"));
+  song = loadSound("1-2.mp3");
 }
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
   imageMode(CORNER);
   noStroke();
-
+  fft = new p5.FFT(0.75, 128);
   generateArtwork();
 }
 
 function draw() {
   background(10, 10, 18);
-
   drawBackground();
   drawMagicDust();
   drawAnimals();
@@ -43,26 +43,25 @@ function generateArtwork() {
   generateMagicDust();
 }
 
-function isOn() {
-  return locked || (speaker && !speaker.paused);
-}
-
-function levels() {
-  if (!isOn()) return { bass: 0, mid: 0, treble: 0 };
-  return { bass: 100, mid: 80, treble: 60 };
+function energy() {
+  if (!song || !song.isPlaying()) return { bass: 0, mid: 0, treble: 0 };
+  fft.analyze();
+  return {
+    bass: fft.getEnergy("bass"),
+    mid: fft.getEnergy("mid"),
+    treble: fft.getEnergy("treble")
+  };
 }
 
 function generateBackground() {
   blobs = [];
-
-  let palette = [
+  const palette = [
     [40, 255, 120],
     [120, 255, 80],
     [180, 80, 255],
     [120, 40, 180],
     [30, 20, 40]
   ];
-
   for (let i = 0; i < 45; i++) {
     blobs.push({
       x: random(width),
@@ -75,46 +74,23 @@ function generateBackground() {
 }
 
 function drawBackground() {
-  const { bass, mid } = levels();
-
+  const { bass } = energy();
   noStroke();
-
   for (let b of blobs) {
-    let s = b.size + map(bass, 0, 255, 0, 100);
-
-    let offsetX =
-      sin(frameCount * 0.01 + b.phase) *
-      map(mid, 0, 255, 0, 25);
-
-    let offsetY =
-      cos(frameCount * 0.01 + b.phase) *
-      map(mid, 0, 255, 0, 15);
-
-    fill(
-      b.color[0],
-      b.color[1],
-      b.color[2],
-      map(bass, 0, 255, 20, 65)
-    );
-
-    circle(b.x + offsetX, b.y + offsetY, s);
+    fill(b.color[0], b.color[1], b.color[2], 24 + bass * 0.12);
+    circle(b.x, b.y, b.size + bass * 0.35);
   }
-
-  let moonSize = 220 + map(bass, 0, 255, 0, 35);
-
   fill(140, 80, 255, 120);
-  circle(width * 0.82, height * 0.18, moonSize);
+  circle(width * 0.82, height * 0.18, 220 + bass * 0.2);
 }
 
 function generateMagicDust() {
   sticks = [];
-
-  let colors = [
+  const colors = [
     [40, 255, 120],
     [180, 80, 255],
     [120, 255, 80]
   ];
-
   for (let i = 0; i < 250; i++) {
     sticks.push({
       x: random(width),
@@ -127,7 +103,6 @@ function generateMagicDust() {
 
 function drawMagicDust() {
   noStroke();
-
   for (let s of sticks) {
     fill(s.color[0], s.color[1], s.color[2], 160);
     circle(s.x, s.y, s.size);
@@ -136,46 +111,40 @@ function drawMagicDust() {
 
 function generateLayout() {
   animals = [];
-
-  let animalCount = width < 600 ? 24 : 30;
-  let responsiveScale = constrain(width / 1242, 0.35, 1);
+  const animalCount = width < 600 ? 24 : 30;
+  const responsiveScale = constrain(width / 1242, 0.35, 1);
 
   for (let i = 0; i < animalCount; i++) {
-    let img = random(imgs);
-    let scaleValue = random(0.12, 0.22) * responsiveScale;
-    let w = img.width * scaleValue;
-    let h = img.height * scaleValue;
-    let marginX = min(max(w, h) * 0.8 + 5, width / 2);
-    let marginY = min(max(w, h) * 0.8 + 5, height / 2);
-
+    const img = random(imgs);
+    const scaleValue = random(0.12, 0.22) * responsiveScale;
+    const w = img.width * scaleValue;
+    const h = img.height * scaleValue;
+    const marginX = min(max(w, h) * 0.8 + 5, width / 2);
+    const marginY = min(max(w, h) * 0.8 + 5, height / 2);
     animals.push({
-      img: img,
+      img,
       x: random(marginX, max(marginX, width - marginX)),
       y: random(marginY, max(marginY, height - marginY)),
-      w: w,
-      h: h,
+      w,
+      h,
       angle: random(-PI / 3, PI / 3),
-      phase: random(TWO_PI),
-      speed: random(0.5, 1.5)
+      phase: random(TWO_PI)
     });
   }
 }
 
 function drawAnimals() {
+  const { bass, mid, treble } = energy();
   imageMode(CENTER);
 
-  const { bass, mid, treble } = levels();
-
   for (let a of animals) {
+    const kick = bass / 255;
+    const sway = mid / 255;
     push();
-    translate(a.x, a.y);
-    rotate(
-      a.angle +
-      sin(frameCount * 0.04 * a.speed + a.phase) *
-      map(mid, 0, 255, 0, 0.15)
-    );
-    scale(map(bass, 0, 255, 1, 1.15));
-    tint(255, map(treble, 0, 255, 180, 255));
+    translate(a.x + sin(a.phase) * sway * 16, a.y - kick * 48);
+    rotate(a.angle + sin(frameCount * 0.08 + a.phase) * sway * 0.5);
+    scale(1 + kick * 0.5);
+    tint(255, 200 + treble * 0.2);
     image(a.img, 0, 0, a.w, a.h);
     pop();
   }
@@ -184,34 +153,14 @@ function drawAnimals() {
   imageMode(CORNER);
 }
 
-function speakerAudio() {
-  if (!speaker) {
-    speaker = new Audio("1-2.mp3");
-    speaker.setAttribute("playsinline", "");
-    speaker.preload = "auto";
-  }
-  return speaker;
-}
-
 function triggerSound() {
   if (millis() - lastTrigger < 400) return;
   lastTrigger = millis();
+  if (!song || !song.isLoaded()) return;
 
-  const audio = speakerAudio();
-
-  if (!audio.paused) {
-    audio.pause();
-    audio.currentTime = 0;
-    locked = false;
-  } else {
-    locked = true;
-    const played = audio.play();
-    if (played) {
-      played.catch(() => {
-        locked = false;
-      });
-    }
-  }
+  userStartAudio();
+  if (song.isPlaying()) song.pause();
+  else song.play();
 }
 
 function mousePressed() {
@@ -224,23 +173,11 @@ function touchStarted() {
   return false;
 }
 
-document.addEventListener("touchstart", (event) => {
-  triggerSound();
-  event.preventDefault();
-}, { passive: false });
-
-window.addEventListener("message", function(event) {
-  if (event.data === "triggerSound") {
-    triggerSound();
-  }
+window.addEventListener("message", function (event) {
+  if (event.data === "triggerSound") triggerSound();
 });
 
 function keyPressed() {
-  if (key === "r" || key === "R") {
-    saveGif("poison-garden", 8);
-  }
-
-  if (key === "s" || key === "S") {
-    saveCanvas("poison-garden", "png");
-  }
+  if (key === "r" || key === "R") saveGif("poison-garden", 8);
+  if (key === "s" || key === "S") saveCanvas("poison-garden", "png");
 }
