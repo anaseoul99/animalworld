@@ -1,3 +1,5 @@
+//v1
+
 let imgs = [];
 let animals = [];
 let blobs = [];
@@ -49,6 +51,17 @@ function generateArtwork() {
   generateBackground();
   generateLayout();
   generateMagicDust();
+}
+
+function openSpeaker() {
+  if (navigator.audioSession) navigator.audioSession.type = "playback";
+  if (window.speakerOpened) return;
+  window.speakerOpened = true;
+  const clip = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=");
+  clip.setAttribute("playsinline", "");
+  clip.volume = 1;
+  const pending = clip.play();
+  if (pending && pending.catch) pending.catch(() => {});
 }
 
 function energy() {
@@ -165,7 +178,9 @@ function toggleSound() {
   if (millis() - lastTrigger < 500) return;
   if (!song || !song.isLoaded()) return;
 
+  openSpeaker();
   getAudioContext().resume();
+  outputVolume(1);
   lastTrigger = millis();
   if (song.isPlaying()) song.pause();
   else song.play();
