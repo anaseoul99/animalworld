@@ -1,5 +1,3 @@
-//vv2
-
 let imgs = [];
 let animals = [];
 let blobs = [];
@@ -18,11 +16,21 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
+  const cnv = createCanvas(windowWidth, windowHeight);
+  cnv.elt.style.touchAction = "none";
   imageMode(CORNER);
   noStroke();
   fft = new p5.FFT(0.75, 128);
   generateArtwork();
+
+  window.toggleAnimalSound = toggleSound;
+  if (!window.animalTouchBound) {
+    window.animalTouchBound = true;
+    document.addEventListener("touchstart", function (event) {
+      if (window.toggleAnimalSound) window.toggleAnimalSound();
+      if (event.cancelable) event.preventDefault();
+    }, { capture: true, passive: false });
+  }
 }
 
 function draw() {
@@ -155,10 +163,10 @@ function drawAnimals() {
 
 function toggleSound() {
   if (millis() - lastTrigger < 500) return;
-  lastTrigger = millis();
   if (!song || !song.isLoaded()) return;
 
   getAudioContext().resume();
+  lastTrigger = millis();
   if (song.isPlaying()) song.pause();
   else song.play();
 }
@@ -167,12 +175,8 @@ function mousePressed() {
   toggleSound();
 }
 
-function touchEnded() {
-  toggleSound();
-}
-
 window.addEventListener("message", function (event) {
-  if (event.data === "triggerSound") toggleSound();
+  if (event.data === "triggerSound" && window.toggleAnimalSound) window.toggleAnimalSound();
 });
 
 function keyPressed() {
