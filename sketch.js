@@ -1,12 +1,10 @@
-//v1
-
 let imgs = [];
 let animals = [];
 let blobs = [];
 let sticks = [];
 
-let song;
-let fft;
+let speaker;
+let isStopped = true;
 let lastTrigger = 0;
 
 function preload() {
@@ -14,7 +12,6 @@ function preload() {
   imgs.push(loadImage("bird.png"));
   imgs.push(loadImage("bear.png"));
   imgs.push(loadImage("unicorn.png"));
-  song = loadSound("1-2.mp3");
 }
 
 function setup() {
@@ -22,14 +19,13 @@ function setup() {
   cnv.elt.style.touchAction = "none";
   imageMode(CORNER);
   noStroke();
-  fft = new p5.FFT(0.75, 128);
   generateArtwork();
 
-  window.toggleAnimalSound = toggleSound;
+  window.triggerAnimal = triggerSound;
   if (!window.animalTouchBound) {
     window.animalTouchBound = true;
-    document.addEventListener("touchstart", function (event) {
-      if (window.toggleAnimalSound) window.toggleAnimalSound();
+    document.addEventListener("touchstart", (event) => {
+      if (window.triggerAnimal) window.triggerAnimal();
       if (event.cancelable) event.preventDefault();
     }, { capture: true, passive: false });
   }
@@ -53,24 +49,24 @@ function generateArtwork() {
   generateMagicDust();
 }
 
-function openSpeaker() {
-  if (navigator.audioSession) navigator.audioSession.type = "playback";
-  if (window.speakerOpened) return;
-  window.speakerOpened = true;
-  const clip = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=");
-  clip.setAttribute("playsinline", "");
-  clip.volume = 1;
-  const pending = clip.play();
-  if (pending && pending.catch) pending.catch(() => {});
+function speakerAudio() {
+  if (!speaker) {
+    speaker = new Audio("1-2.mp3");
+    speaker.setAttribute("playsinline", "");
+    speaker.setAttribute("webkit-playsinline", "");
+    speaker.preload = "auto";
+    speaker.volume = 1;
+  }
+  return speaker;
 }
 
 function energy() {
-  if (!song || !song.isPlaying()) return { bass: 0, mid: 0, treble: 0 };
-  fft.analyze();
+  if (isStopped || !speaker || speaker.paused) return { bass: 0, mid: 0, treble: 0 };
+  const t = speaker.currentTime;
   return {
-    bass: fft.getEnergy("bass"),
-    mid: fft.getEnergy("mid"),
-    treble: fft.getEnergy("treble")
+    bass: 180 + Math.sin(t * 6.5) * 75,
+    mid: 90 + Math.sin(t * 2.2 + 1) * 70,
+    treble: 70 + Math.sin(t * 11) * 50
   };
 }
 
@@ -174,24 +170,41 @@ function drawAnimals() {
   imageMode(CORNER);
 }
 
-function toggleSound() {
-  if (millis() - lastTrigger < 500) return;
-  if (!song || !song.isLoaded()) return;
-
-  openSpeaker();
-  getAudioContext().resume();
-  outputVolume(1);
+function triggerSound() {
+  if (millis() - lastTrigger < 400) return;
   lastTrigger = millis();
-  if (song.isPlaying()) song.pause();
-  else song.play();
+
+  if (navigator.audioSession) navigator.audioSession.type = "playback";
+  const audio = speakerAudio();
+
+  if (!audio.paused) {
+    audio.pause();
+    audio.currentTime = 0;
+    isStopped = true;
+    return;
+  }
+
+  isStopped = false;
+  const played = audio.play();
+  if (played && played.catch) {
+    played.catch(() => {
+      isStopped = true;
+    });
+  }
 }
 
 function mousePressed() {
-  toggleSound();
+  triggerSound();
+  return false;
 }
 
-window.addEventListener("message", function (event) {
-  if (event.data === "triggerSound" && window.toggleAnimalSound) window.toggleAnimalSound();
+function touchStarted() {
+  triggerSound();
+  return false;
+}
+
+window.addEventListener("message", (event) => {
+  if (event.data === "triggerSound" && window.triggerAnimal) window.triggerAnimal();
 });
 
 function keyPressed() {
